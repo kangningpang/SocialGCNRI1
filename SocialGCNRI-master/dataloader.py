@@ -37,12 +37,12 @@ class PairDataset:
             self.train_set.to_csv(f'./data/preprocessed/{src}/train_set.txt', index=False)
             self.test_set.to_csv(f'./data/preprocessed/{src}/test_set.txt', index=False)
 
-        #提取用户和物品数量
+
         self.trainUser = np.array(self.train_set['user'])
         self.trainUniqueUser = np.unique(self.train_set['user'])
         self.trainItem = np.array(self.train_set['item'])
 
-        # 存储交互数量
+
         self._trainDataSize = len(self.train_set)
         self._testDataSize = len(self.test_set)
 
@@ -52,15 +52,15 @@ class PairDataset:
         print(f"Number of Ratings: {self._trainDataSize + self._testDataSize}")
         print(f"{world.dataset} Rating Density: {(self._trainDataSize + self._testDataSize) / self.n_user / self.m_item}")
 
-        # build (users,items), bipartite graph 创建用户-项目交互图
+        # build (users,items), bipartite graph 
         self.interactionGraph = None
         self.UserItemNet = csr_matrix((np.ones(len(self.train_set)), (self.trainUser, self.trainItem)),
                                       shape=(self.n_user, self.m_item))
 
-        #  user's history interacted items  获得用户的历史交互项目
+        #  user's history interacted items  
         self._allPos = self.getUserPosItems(list(range(self.n_user)))
 
-        # get test dictionary 获得测试交互字典和冷启动交互字典
+        # get test dictionary 
         self._testDic = self.__build_test()
         self._coldTestDic = self.__build_cold_test()
         self._userDic, self._itemDic = self._getInteractionDic()
@@ -131,7 +131,7 @@ class PairDataset:
 
 
     def __build_cold_test(self):
-        #删除交互大于20条的数据
+
         test_data = self._testDic.copy()
         for i in list(test_data.keys()):
             try:
@@ -142,9 +142,9 @@ class PairDataset:
         return test_data
 
     def _getInteractionDic(self):
-        #存储每个用户的交互物品列表
+
         user_interaction = {}
-        #存储每个物品的交互用户列表
+
         item_interaction = {}
 
         def getDict(_set):
@@ -182,7 +182,7 @@ class GraphDataset(PairDataset):
                 logging.debug("generating adjacency matrix")
                 start = time()
 
-                #计算A,原始交互矩阵
+
                 adj_mat = sp.dok_matrix((self.n_user + self.m_item, self.n_user + self.m_item), dtype=np.float32)
                 adj_mat = adj_mat.tolil()
                 R = self.UserItemNet.tolil()
@@ -193,13 +193,13 @@ class GraphDataset(PairDataset):
                 d_inv = np.power(rowsum, -0.5).flatten()
                 d_inv[np.isinf(d_inv)] = 0.
                 d_mat = sp.diags(d_inv)
-                # 改变矩阵A的形式为A+I, 算子更新为D(A+I)D
+
                 adj_mat=adj_mat+ sp.eye(adj_mat.shape[0])
                 norm_adj = d_mat.dot(adj_mat)
                 norm_adj = norm_adj.dot(d_mat)
                 norm_adj = norm_adj.tocsr()
 
-                #计算A2,A2矩阵中加入用户相似矩阵和物品相似矩阵
+
                 adj2_mat = sp.dok_matrix((self.n_user + self.m_item, self.n_user + self.m_item), dtype=np.float32)
                 adj2_mat = adj2_mat.tolil()
                 U_U = R.dot(R.T)
@@ -213,29 +213,12 @@ class GraphDataset(PairDataset):
                 d2_inv = np.power(rowsum2, -0.5).flatten()  # D^-0.5
                 d2_inv[np.isinf(d2_inv)] = 0.
                 d2_mat = sp.diags(d2_inv)
-                #改变矩阵A2的形式为A2+I, 算子更新为D(A2+I)D
+
                 adj2_mat= adj2_mat + sp.eye(adj2_mat.shape[0])
                 norm2_adj = d_mat.dot(adj2_mat)
                 norm2_adj = norm2_adj.dot(d2_mat)
                 norm2_adj = norm2_adj.tocsr()
 
-                # #邻接矩阵A3  融入用户社交和物品信息的嵌入矩阵
-                # adj3_mat = sp.dok_matrix((self.n_user + self.m_item, self.n_user + self.m_item), dtype=np.float32)
-                # adj3_mat = adj3_mat.tolil()
-                # U_U = R.dot(R.T)
-                # I_I = R.T.dot(R)
-                # adj3_mat[self.n_user:, :self.m_item] = I_I
-                # adj3_mat[:self.n_user, self.m_item:] = U_U
-                # adj3_mat = adj3_mat.todok()
-                # rowsum2 = np.array(adj3_mat.sum(axis=1))  # D
-                # d3_inv = np.power(rowsum2, -0.5).flatten()  # D^-0.5
-                # d3_inv[np.isinf(d3_inv)] = 0.
-                # d3_mat = sp.diags(d3_inv)
-                # #改变矩阵A2的形式为A2+I, 算子更新为D(A2+I)
-                # adj3_mat= adj3_mat + sp.eye(adj3_mat.shape[0])
-                # norm3_adj = d_mat.dot(adj3_mat)
-                # norm3_adj = norm3_adj.dot(d3_mat)
-                # norm3_adj = norm3_adj.tocsr()
 
 
                 sp.save_npz(f'./data/preprocessed/{self.src}/interaction_adj_mat.npz', norm_adj)
