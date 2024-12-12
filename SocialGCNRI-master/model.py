@@ -69,19 +69,19 @@ class fft(nn.Module):
 
 
 def pearson_correlation(x, y):
-        # 计算x和y的均值
+
         x_mean = torch.mean(x, dim=-1, keepdim=True)
         y_mean = torch.mean(y, dim=-1, keepdim=True)
 
-        # 计算x和y的偏差
+
         x_dev = x - x_mean
         y_dev = y - y_mean
 
-        # 计算皮尔逊相关系数
+
         numerator = torch.sum(x_dev * y_dev, dim=-1)
         denominator = torch.sqrt(torch.sum(x_dev ** 2, dim=-1)) * torch.sqrt(torch.sum(y_dev ** 2, dim=-1))
 
-        # 防止除以零
+
         denominator = torch.where(denominator < 1e-7, torch.tensor(1e-7).to(denominator.device), denominator)
 
         r = numerator / denominator
@@ -225,7 +225,7 @@ class SocialLGN(LightGCN):
         return users, items
 
 
-class Graph_Comb(nn.Module):  #图融合操作，结合U-I图嵌入和社交嵌入
+class Graph_Comb(nn.Module): 
     def __init__(self, embed_dim):
         super(Graph_Comb, self).__init__()
         self.att_x = nn.Linear(embed_dim, embed_dim, bias=False)
